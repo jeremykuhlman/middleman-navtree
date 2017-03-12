@@ -87,7 +87,7 @@ You can likewise limit pagination to a specific subtree:
 
 The navigation tree html layout is template driven based of the .erb files found in the `views` directory.  These can be overridden in your own middleman site by providing template overrides for each.  For examples please see the default templates includedin the extension.
 
--## Contributing
+## Contributing
 
 1. Fork the project
 2. Create your feature branch (git checkout -b my-new-feature)
