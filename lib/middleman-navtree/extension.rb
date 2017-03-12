@@ -17,6 +17,11 @@ module Middleman
       option :promote_files, ['index.html.erb'], 'A list of files you want to push to the front of the tree (if they exist).'
       option :ext_whitelist, [], 'A whitelist of filename extensions (post-render) that we are allowing in our navtree. Example: [".html"]'
       option :directory_index, false, "Enables directory indexing, where directories with index files will be rendered as links"
+      option :navigation_tree_wrapper, File.expand_path('../views/_navigation_tree_wrapper.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the tree wrapper.'
+      option :navigation_tree_items_container, File.expand_path('../views/_navigation_tree_items_container.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the tree items container.'
+      option :navigation_tree_item_child, File.expand_path('../views/_navigation_tree_item_child.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the tree item child.'
+      option :navigation_tree_item_directory_index_linked, File.expand_path('../views/_navigation_tree_item_directory_index_linked.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the linked tree item child if directory indexes is activiated.'
+      option :navigation_tree_item_directory_index_non_linked, File.expand_path('../views/_navigation_tree_item_directory_index_non_linked.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the non linked tree item child if directory indexes is activiated.'
 
       # Helpers for use within templates and layouts.
       self.defined_helpers = [ ::Middleman::NavTree::Helpers ]
@@ -60,7 +65,6 @@ module Middleman
           IO.write(data_path, YAML::dump(tree_hash))
         end
       end
-
 
       # Method for storing the directory structure in an ordered hash. See more on
       # ordered hashes at https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
