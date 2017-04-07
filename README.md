@@ -24,7 +24,6 @@ Alternatively, you can specify the options you want. Here's an example showing t
       options.ignore_files = ['sitemap.xml', 'robots.txt'] # An array of files we want to ignore when building our tree.
       options.ignore_dir = ['assets'] # An array of directories we want to ignore when building our tree.
       options.home_title = 'Home' # The default link title of the home page (located at "/"), if otherwise not detected.
-      options.promote_files = ['index.html.erb'] # Any files we might want to promote to the front of our navigation
       options.ext_whitelist = [] # If you add extensions (like '.md') to this array, it builds a whitelist of filetypes for inclusion in the navtree.
       option :navigation_tree_wrapper, File.expand_path('../views/_navigation_tree_wrapper.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the tree wrapper.'
       option :navigation_tree_items_container, File.expand_path('../views/_navigation_tree_items_container.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the tree items container.'
