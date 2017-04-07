@@ -14,7 +14,6 @@ module Middleman
       option :ignore_files, ['sitemap.xml', 'robots.txt'], 'A list of filenames we want to ignore when building our tree.'
       option :ignore_dir, ['assets'], 'A list of directory names we want to ignore when building our tree.'
       option :home_title, 'Home', 'The default link title of the home page (located at "/"), if otherwise not detected.'
-      option :promote_files, ['index.html.erb'], 'A list of files you want to push to the front of the tree (if they exist).'
       option :ext_whitelist, [], 'A whitelist of filename extensions (post-render) that we are allowing in our navtree. Example: [".html"]'
       option :directory_index, false, "Enables directory indexing, where directories with index files will be rendered as links"
       option :navigation_tree_wrapper, File.expand_path('../views/_navigation_tree_wrapper.html.erb', __FILE__), 'Path (relative to project root) to an ERb template that will be used to generate the tree wrapper.'
@@ -34,13 +33,11 @@ module Middleman
         require 'yaml'
         require 'titleize'
 
-        @existing_promotes = []
-
       end
 
-      def after_configuration
-        # Add the user's config directories to the "ignore_dir" option because
-        # these are all things we won't need printed in a NavTree.
+      def after_build
+
+        # Add the user's config directories to the "ignore_dir" option because these are all things we won't need printed in a NavTree.
         options.ignore_dir << app.config[:js_dir]
         options.ignore_dir << app.config[:css_dir]
         options.ignore_dir << app.config[:fonts_dir]
@@ -52,12 +49,8 @@ module Middleman
         # Build a hash out of our directory information
         tree_hash = scan_directory(app.config[:source], options)
 
-        # Promote any promoted files to the beginning of our hash.
-        tree_hash = promote_files(tree_hash, options)
-
         # Write our directory tree to file as YAML.
-        # @todo: This step doesn't rebuild during live-reload, which causes errors if you move files
-        #        around during development. It may not be that hard to set up. Low priority though.
+        # @todo: This step doesn't rebuild during live-reload, which causes errors if you move files around during development. It may not be that hard to set up. Low priority though.
         if options.automatic_tree_updates
           FileUtils.mkdir_p(app.config[:data_dir])
 
@@ -66,43 +59,42 @@ module Middleman
         end
       end
 
-      # Method for storing the directory structure in an ordered hash. See more on
-      # ordered hashes at https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
+      # Method for storing the directory structure in an ordered hash. See more on ordered hashes at https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
       def scan_directory(path, options, name=nil)
+
         data = {}
         Dir.foreach(path) do |filename|
 
-          # Check to see if we should skip this file. We skip invisible files
-          # (starts with "."), ignored files, and promoted files (which are
-          # handled later in the process).
+          # Check to see if we should skip this file. We skip invisible files (starts with ".") and ignored files.
           next if (filename[0] == '.')
           next if (filename == '..' || filename == '.')
           next if options.ignore_files.include? filename
 
-          if options.promote_files.include? filename
-            original_path = path.sub(/^#{app.config[:source]}/, '') + '/' + filename
-            @existing_promotes << original_path
-            next
-          end
-
           full_path = File.join(path, filename)
           if File.directory?(full_path)
-            # This item is a directory.
-            # Check to see if we should ignore this directory.
+
+            # This item is a directory.  Check to see if we should ignore this directory.
             next if options.ignore_dir.include? filename
 
             # Loop through the method again.
-            data.store(filename.gsub(' ', '%20'), scan_directory(full_path, options, filename))
-          else
+            position = get_directory_display_order(full_path)
+            data.store((position ? "#{'%04d' % position}-" : "") + filename.gsub(' ', '%20'), scan_directory(full_path, options, filename))
 
+          else
             # This item is a file.
             if !options.ext_whitelist.empty?
+
               # Skip any whitelisted extensions.
               next unless options.ext_whitelist.include? File.extname(filename)
             end
 
             original_path = path.sub(/^#{app.config[:source]}/, '') + '/' + filename
-            data.store(filename.gsub(' ', '%20'), original_path.gsub(' ', '%20'))
+
+            # Get this resource so we can figure out the display order
+            this_resource = resource_from_value(original_path)
+            position =  get_file_display_order(this_resource)
+
+            data.store((position ? "#{'%04d' % position}-" : "") + filename.gsub(' ', '%20'), original_path.gsub(' ', '%20'))
           end
         end
 
@@ -110,45 +102,41 @@ module Middleman
         return Hash[data.sort]
       end
 
-      # Method for appending promoted files to the front of our source tree.
-      # @todo: Currently, options.promote_files only expects a filename, which means that
-      #        if multiple files in different directories have the same filename, they
-      #        will both be promoted, and one will not appear (due to the 'no-two-identical
-      #        -indices-in-a-hash' rule).
-      # @todo: This system also assumes filenames only have a single extension,
-      #        which may not be the case (like index.html.erb)
-      # @todo: Basically, this is not elegent at all.
-      def promote_files(tree_hash, options)
+      # Returns a resource from a provided value
+      def resource_from_value(value)
 
-        if @existing_promotes.any?
-          ordered_matches = []
+        extensionlessPath = app.sitemap.extensionless_path(value)
 
-          # The purpose of this loop is to get my list of existing promotes
-          # in the order specified in the options array, so it can be promoted
-          # properly.
-          options.promote_files.each do |filename|
-            # Get filename without extension (index.md => index)
-            filename_without_ext = filename.chomp(File.extname(filename))
-            # Test against each existing_promote, and store matches
-            @existing_promotes.each do |pathname|
-              # Get another filename without extension from the pathname (/book/index.html => index)
-              pathname_without_ext = File.basename(pathname, ".*")
-              # Add matches to our ordered matches array.
-              if filename_without_ext == pathname_without_ext
-                ordered_matches << [filename, pathname]
-              end
-            end
-          end
-          # Promote all files found in both the promotes list and the file structure. This is an array
-          # of arrays
-          ordered_matches.reverse.each do |match|
-            tree_hash = Hash[match[0], match[1]].merge!(tree_hash)
-          end
+        unless extensionlessPath.end_with? ".html"
+         extensionlessPath << ".html"
         end
 
-        return tree_hash
+        app.sitemap.find_resource_by_path(extensionlessPath)
       end
 
+      # Gets the display order for a file
+      def get_file_display_order(file)
+        if !file.nil? && file.data.display_order
+          return file.data.display_order
+        end
+      end
+
+      # Gets the display order for a directory
+      def get_directory_display_order(directory)
+
+        # Check for a .display_info file
+        if File.file?("#{directory}/.display_info")
+          File.read("#{directory}/.display_info").each_line do |line|
+
+            kv = line.split(":")
+
+            # Get the "display_order" value
+            if kv[0].strip == "display_order"
+              return kv[1].strip
+            end
+          end
+        end
+      end
     end
   end
 end

@@ -130,21 +130,13 @@ module Middleman
         return FALSE
       end
 
-      # Format Directory name for display in navtree.
-      # Example Name: 1%20-%20sink-or_swim
-      def format_directory_name(dir_name)
-        dir_name.gsub('%20', ' ') #=> 1 - sink-or_swim
-        # @todo: Find a way for titleize to not blow away ' - ' formatting.
-        #formatted_name.capitalize! #=> 1 Sink or Swim
-      end
-
       # Utility helper for getting the page title for display in the navtree.
       # Based on this: http://forum.middlemanapp.com/t/using-heading-from-page-as-title/44/3
       # 1) Use the title from frontmatter metadata, or
       # 2) peek into the page to find the H1, or
       # 3) Use the home_title option (if this is the home page--defaults to "Home"), or
       # 4) fallback to a filename-based-title
-      def discover_title(page = current_page)
+      def discover_file_title(page = current_page)
 
         if page.data.title
           return page.data.title # Frontmatter title
@@ -159,11 +151,33 @@ module Middleman
         end
       end
 
+      # Utility helper for getting the page title for display in the navtree.
+      # Based on this: http://forum.middlemanapp.com/t/using-heading-from-page-as-title/44/3
+      # 1) Use the title from frontmatter metadata, or
+      # 2) peek into the page to find the H1, or
+      # 3) Use the home_title option (if this is the home page--defaults to "Home"), or
+      # 4) fallback to a filename-based-title
+      def discover_directory_title(name, directory)
+
+        # Check for a .display_info file
+        if File.file?("build/#{directory}/.display_info")
+          File.read("build/#{directory}/.display_info").each_line do |line|
+            kv = line.split(":")
+
+            if kv[0].strip == "title"
+              return kv[1].strip.gsub!(/\A"|"\Z/, '')
+            end
+          end
+        else
+          return name.gsub('%20', ' ') #=> 1 - sink-or_swim
+        end
+      end
+
       private
 
       # generates an HTML li child from a given resource
       def child_li(resource)
-        title = discover_title(resource)
+        title = discover_file_title(resource)
 
         render_partial(extensions[:navtree].options[:navigation_tree_item_child], {:url => resource.url, :resource_status => resource_status(resource), :title => title })
       end
@@ -182,7 +196,8 @@ module Middleman
       # if directory_index is enabled and the provided directory contains an index, generate a linked li.parent otherwise returns a normal (non-linked) HTML li.parent
       def directory_index_aware_li(key, value, directory_content_html)
 
-        name = format_directory_name(key)
+        # Determine the directory title either from the key or the first key/value pair
+        name = discover_directory_title(key, File.dirname(value.first[1]))
 
         if extensions[:navtree].options[:directory_index] && index_file = value.keys.detect{|k| k.start_with?("index")}
 
@@ -193,7 +208,7 @@ module Middleman
           resource_path += "index" if resource_path.ends_with?("/")
           resource = sitemap.find_resource_by_page_id(resource_path)
 
-          render_partial(extensions[:navtree].options[:navigation_tree_item_directory_index_linked], {:url => destination, :resource_status => resource_status(resource), :link => link, :name => name, :directory_content_html => directory_content_html })
+          render_partial(extensions[:navtree].options[:navigation_tree_item_directory_index_linked], {:url => destination, :resource_status => resource_status(resource), :name => name, :directory_content_html => directory_content_html })
         else
           render_partial(extensions[:navtree].options[:navigation_tree_item_directory_index_non_linked], { :name => name, :directory_content_html => directory_content_html })
         end
