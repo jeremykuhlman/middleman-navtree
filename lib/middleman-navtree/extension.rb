@@ -36,7 +36,7 @@ module Middleman
 
       end
 
-      def after_build
+      def after_configuration
 
         # Add the user's config directories to the "ignore_dir" option because these are all things we won't need printed in a NavTree.
         options.ignore_dir << app.config[:js_dir]
