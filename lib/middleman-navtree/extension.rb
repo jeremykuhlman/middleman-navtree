@@ -1,4 +1,5 @@
 require 'middleman-navtree/helpers'
+# require 'pry'
 
 module Middleman
   module NavTree

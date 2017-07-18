@@ -196,8 +196,11 @@ module Middleman
       # if directory_index is enabled and the provided directory contains an index, generate a linked li.parent otherwise returns a normal (non-linked) HTML li.parent
       def directory_index_aware_li(key, value, directory_content_html)
 
-        # Determine the directory title either from the key or the first key/value pair
-        name = discover_directory_title(key, File.dirname(value.first[1]))
+        # Get the directory path from the first key/value file path that isn't another hash
+        file_path = value[value.keys.select{ |x| value[x].is_a?(String) }.first]
+
+        # Determine the directory title either from the key or the first key/value pair that isn't another directory
+        name = discover_directory_title(key, File.dirname(file_path))
 
         if extensions[:navtree].options[:directory_index] && index_file = value.keys.detect{|k| k.start_with?("index")}
 
@@ -237,6 +240,7 @@ module Middleman
         vars.each do |k, v|
           b.local_variable_set k.to_sym, v
         end
+
         return b
       end
 
