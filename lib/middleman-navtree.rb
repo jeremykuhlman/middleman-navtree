@@ -10,5 +10,5 @@ require 'middleman-navtree/version'
 
 ::Middleman::Extensions.register(:navtree) do
     require "middleman-navtree/extension"
-      ::Middleman::NavTree::NavTreeExtension
+      ::Middleman::NavTreeExtension::Extension
 end

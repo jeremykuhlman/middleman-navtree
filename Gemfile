@@ -9,7 +9,8 @@ group :development do
   gem 'rake'
   gem 'rdoc'
   gem 'yard'
-  gem 'pry', :require => true # for debugging
+  gem 'pry'
+  gem 'pry-stack_explorer', '~> 0.4.9.2'
 end
 
 group :test do

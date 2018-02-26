@@ -11,7 +11,6 @@ module Middleman
 
       #  A recursive helper for converting source tree data
       def build_partial_navigation_tree(value, depth = Float::INFINITY, key = nil, level = 0)
-
         navigation_tree = ''
 
         if value.is_a?(String)

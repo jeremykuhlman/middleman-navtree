@@ -1,1 +1,1 @@
-require 'middleman-navtree'
+require "middleman-navtree"

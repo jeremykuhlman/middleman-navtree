@@ -1,17 +1,13 @@
-require 'middleman-navtree/helpers'
-# require 'pry'
+require "middleman-navtree/helpers"
+require "pry"
 
 module Middleman
-  module NavTree
+  module NavTreeExtension
+    class Extension < Middleman::Extension
 
-    # Extension namespace
-    # @todo: Test the extension against a vanilla Middleman install.
-    # @todo: Test the extension against a middleman-blog install.
-    class NavTreeExtension < ::Middleman::Extension
       # All the options for this extension
       option :source_dir, 'source', 'The directory our tree will begin at.' # This setting does nothing but remains listed for backwards compatibility.
       option :data_file, 'tree.yml', 'The file we will write our directory tree to.'
-      option :automatic_tree_updates, true, 'The tree.yml file will be updated automatically when source files are changed.'
       option :ignore_files, ['sitemap.xml', 'robots.txt'], 'A list of filenames we want to ignore when building our tree.'
       option :ignore_dir, ['assets'], 'A list of directory names we want to ignore when building our tree.'
       option :home_title, 'Home', 'The default link title of the home page (located at "/"), if otherwise not detected.'
@@ -31,12 +27,15 @@ module Middleman
         super
 
         # Require libraries only when activated
-        require 'yaml'
-        require 'titleize'
-
+        require "yaml"
+        require "titleize"
       end
 
       def after_configuration
+
+      end
+
+      def before_build(builder)
 
         # Add the user's config directories to the "ignore_dir" option because these are all things we won't need printed in a NavTree.
         options.ignore_dir << app.config[:js_dir]
@@ -51,13 +50,9 @@ module Middleman
         tree_hash = scan_directory(app.config[:source], options)
 
         # Write our directory tree to file as YAML.
-        # @todo: This step doesn't rebuild during live-reload, which causes errors if you move files around during development. It may not be that hard to set up. Low priority though.
-        if options.automatic_tree_updates
-          FileUtils.mkdir_p(app.config[:data_dir])
-
-          data_path = app.config[:data_dir] + '/' + options.data_file
-          IO.write(data_path, YAML::dump(tree_hash))
-        end
+        FileUtils.mkdir_p(app.config[:data_dir])
+        data_path = app.config[:data_dir] + '/' + options.data_file
+        IO.write(data_path, YAML::dump(tree_hash))
       end
 
       # Method for storing the directory structure in an ordered hash. See more on ordered hashes at https://www.igvita.com/2009/02/04/ruby-19-internals-ordered-hash/
