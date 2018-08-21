@@ -81,7 +81,7 @@ module Middleman
       # Utility helper for getting the directory title for display in the navtree.
       def discover_directory_title(name, directory_path)
 
-        # Check for a .display_info file
+        # Check for a .display_info file in the source directory
         display_info_file_path = File.join("source", directory_path, ".display_info")
 
         if File.file?(display_info_file_path)
