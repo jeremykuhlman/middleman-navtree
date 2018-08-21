@@ -1,5 +1,5 @@
 module Middleman
   module NavTree
-    VERSION = "0.1.10"
+    VERSION = "0.1.15"
   end
 end
