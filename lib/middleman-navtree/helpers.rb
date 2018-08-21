@@ -11,7 +11,7 @@ module Middleman
 
       #  A recursive helper for converting source tree data
       def build_partial_navigation_tree(value, depth = Float::INFINITY, key = nil, level = 0)
-        navigation_tree = ''
+        navigation_tree = ""
 
         if value.is_a?(String)
 
@@ -46,74 +46,11 @@ module Middleman
 
             # This is a directory.
             # The directory has a key and should be listed in the page hieararcy with HTML.
-            navigation_tree << directory_index_aware_li(key, value, directory_content_html)
+            navigation_tree << parent_li(key, value, directory_content_html)
           end
         end
 
         return navigation_tree
-      end
-
-      # Pagination helpers
-      # @todo: One potential future feature is previous/next links for paginating on a
-      #        single level instead of a flattened tree. I don't need it but it seems pretty easy.
-      def previous_link(sourcetree)
-
-        pagelist = flatten_source_tree(sourcetree)
-        position = get_current_position_in_page_list(pagelist)
-
-        # Skip link generation if position is nil (meaning, the current page isn't in our pagination pagelist).
-        if position
-          prev_page = pagelist[position - 1]
-          options = {:class => "previous"}
-
-          unless first_page?(pagelist)
-            link_to("Previous", prev_page, options)
-          end
-        end
-      end
-
-      def next_link(sourcetree)
-
-        pagelist = flatten_source_tree(sourcetree)
-        position = get_current_position_in_page_list(pagelist)
-
-        # Skip link generation if position is nil (meaning, the current page isn't in our pagination pagelist).
-        if position
-          next_page = pagelist[position + 1]
-          options = {:class => "next"}
-
-          unless last_page?(pagelist)
-            link_to("Next", next_page, options)
-          end
-        end
-      end
-
-      # Helper for use in pagination methods.
-      def first_page?(pagelist)
-        return true if get_current_position_in_page_list(pagelist) == 0
-      end
-
-      # Helper for use in pagination methods.
-      def last_page?(pagelist)
-        return true if pagelist[get_current_position_in_page_list(pagelist)] == pagelist[-1]
-      end
-
-      # Method to flatten the source tree, for use in pagination methods.
-      def flatten_source_tree(value, k = [], level = 0, flat_tree = [])
-
-        if value.is_a?(String)
-
-          # This is a child item (a file).
-          flat_tree.push(sitemap.extensionless_path(value))
-        elsif value.is_a?(Hash)
-
-          # This is a parent item (a directory).
-          value.each do |key, child|
-            flatten_source_tree(child, key, level + 1, flat_tree)
-          end
-        end
-
-        return flat_tree
       end
 
       # Helper for use in pagination methods.
@@ -130,19 +67,10 @@ module Middleman
       end
 
       # Utility helper for getting the page title for display in the navtree.
-      # Based on this: http://forum.middlemanapp.com/t/using-heading-from-page-as-title/44/3
-      # 1) Use the title from frontmatter metadata, or
-      # 2) peek into the page to find the H1, or
-      # 3) Use the home_title option (if this is the home page--defaults to "Home"), or
-      # 4) fallback to a filename-based-title
       def discover_file_title(page = current_page)
 
         if page.data.title
           return page.data.title # Frontmatter title
-        elsif match = page.render({:layout => false, :no_images => true}).match(/<h.+>(.*?)<\/h1>/)
-          return match[1] # H1 title
-        elsif page.url == '/'
-          return extensions[:navtree].options[:home_title]
         else
           filename = page.url.split(/\//).last.gsub('%20', ' ').titleize
 
@@ -150,25 +78,21 @@ module Middleman
         end
       end
 
-      # Utility helper for getting the page title for display in the navtree.
-      # Based on this: http://forum.middlemanapp.com/t/using-heading-from-page-as-title/44/3
-      # 1) Use the title from frontmatter metadata, or
-      # 2) peek into the page to find the H1, or
-      # 3) Use the home_title option (if this is the home page--defaults to "Home"), or
-      # 4) fallback to a filename-based-title
-      def discover_directory_title(name, directory)
+      # Utility helper for getting the directory title for display in the navtree.
+      def discover_directory_title(name, directory_path)
 
         # Check for a .display_info file
-        if File.file?("build/#{directory}/.display_info")
-          File.read("build/#{directory}/.display_info").each_line do |line|
-            kv = line.split(":")
+        display_info_file_path = File.join("source", directory_path, ".display_info")
 
-            if kv[0].strip == "title"
-              return kv[1].strip.gsub!(/\A"|"\Z/, '')
-            end
-          end
+        if File.file?(display_info_file_path)
+
+            display_info_hash = YAML.load_file(display_info_file_path)
+
+            return display_info_hash.has_key?("title") ? display_info_hash["title"] :  "No Title Key Set"
         else
-          return name.gsub('%20', ' ') #=> 1 - sink-or_swim
+
+          # No file found, so just parse the directory name
+          return name.gsub("%20", " ").titleize
         end
       end
 
@@ -192,14 +116,14 @@ module Middleman
         sitemap.find_resource_by_path(extensionlessPath)
       end
 
-      # if directory_index is enabled and the provided directory contains an index, generate a linked li.parent otherwise returns a normal (non-linked) HTML li.parent
-      def directory_index_aware_li(key, value, directory_content_html)
+      # generate a linked li.parent otherwise returns a normal (non-linked) HTML li.parent
+      def parent_li(key, value, directory_content_html)
 
         # Get the directory path from the first key/value file path that isn't another hash
-        file_path = value[value.keys.select{ |x| value[x].is_a?(String) }.first]
+        directory_path = value[value.keys.select{ |x| value[x].is_a?(String) }.first]
 
         # Determine the directory title either from the key or the first key/value pair that isn't another directory
-        name = discover_directory_title(key, File.dirname(file_path))
+        name = discover_directory_title(key, File.dirname(directory_path))
 
         if extensions[:navtree].options[:directory_index] && index_file = value.keys.detect{|k| k.start_with?("index")}
 
@@ -218,7 +142,7 @@ module Middleman
 
       # checks if this resource is the current page returns active if it is, an empty string otherwise
       def resource_status(resource)
-        resource == current_page ? 'active' : ''
+        resource == current_page ? "active" : ""
       end
 
       # renders a partial template

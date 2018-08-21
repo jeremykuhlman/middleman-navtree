@@ -74,7 +74,7 @@ module Middleman
 
             # Loop through the method again.
             position = get_directory_display_order(full_path)
-            data.store((position ? "#{'%04d' % position}-" : "") + filename.gsub(' ', '%20'), scan_directory(full_path, options, filename))
+            data.store("#{'%04d' % position}-" + filename.gsub(' ', '%20'), scan_directory(full_path, options, filename))
 
           else
             # This item is a file.
@@ -90,7 +90,7 @@ module Middleman
             this_resource = resource_from_value(original_path)
             position =  get_file_display_order(this_resource)
 
-            data.store((position ? "#{'%04d' % position}-" : "") + filename.gsub(' ', '%20'), original_path.gsub(' ', '%20'))
+            data.store("#{'%04d' % position}-" + filename.gsub(' ', '%20'), original_path.gsub(' ', '%20'))
           end
         end
 
@@ -114,24 +114,28 @@ module Middleman
       def get_file_display_order(file)
         if !file.nil? && file.data.display_order
           return file.data.display_order
+        else
+          return "0"
         end
       end
 
       # Gets the display order for a directory
       def get_directory_display_order(directory)
 
+        display_info_file_path = File.join(directory, ".display_info")
+
         # Check for a .display_info file
-        if File.file?("#{directory}/.display_info")
-          File.read("#{directory}/.display_info").each_line do |line|
+        if File.file?(display_info_file_path)
 
-            kv = line.split(":")
+          display_info_hash = YAML.load_file(display_info_file_path)
 
-            # Get the "display_order" value
-            if kv[0].strip == "display_order"
-              return kv[1].strip
-            end
+          if display_info_hash.has_key?("display_order")
+            return display_info_hash["display_order"]
           end
         end
+
+        # No file or key found so return a display order of 0
+        return 0
       end
     end
   end
